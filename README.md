@@ -163,6 +163,7 @@ soc_alert_env/
 ├── alerts.py              # Alert templates and scenario generators
 ├── graders.py             # Deterministic grading functions
 ├── baseline.py            # LLM baseline inference script
+├── inference.py           # Mandatory LLM inference script
 └── server/
     ├── __init__.py
     ├── soc_alert_env_environment.py  # Core environment logic
