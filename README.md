@@ -164,10 +164,11 @@ soc_alert_env/
 ├── graders.py             # Deterministic grading functions
 ├── baseline.py            # LLM baseline inference script
 ├── inference.py           # Mandatory LLM inference script
+├── Dockerfile             # Root-level container image definition
 └── server/
     ├── __init__.py
     ├── soc_alert_env_environment.py  # Core environment logic
     ├── app.py             # FastAPI application
-    ├── Dockerfile         # Container image definition
+    ├── Dockerfile         # Container image (used by openenv push)
     └── requirements.txt   # Server dependencies
 ```
