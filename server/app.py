@@ -16,10 +16,9 @@ Exposes OpenEnv core endpoints plus hackathon-required custom endpoints:
 import os
 from typing import Any, Dict, List, Optional
 
-# Disable OpenEnv's built-in web interface so our custom Gradio UI takes over at /web
-os.environ["ENABLE_WEB_INTERFACE"] = "false"
+# Enable OpenEnv's built-in web interface (Playground) at /web
+os.environ["ENABLE_WEB_INTERFACE"] = "true"
 
-import gradio as gr
 from fastapi import Body, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -157,7 +156,7 @@ async def run_baseline():
 
     model_name = "gpt-4o-mini"
     if api_key.startswith("hf_"):
-        model_name = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+        model_name = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
 
     scores = run_baseline(api_key=api_key, model=model_name)
     return BaselineResponse(
@@ -166,24 +165,7 @@ async def run_baseline():
     )
 
 
-# ---------------------------------------------------------------------------
-# Mount Gradio UI
-# ---------------------------------------------------------------------------
-try:
-    try:
-        from ..gradio_ui import build_demo
-    except ImportError:
-        from gradio_ui import build_demo
-
-    _demo = build_demo()
-    app = gr.mount_gradio_app(app, _demo, path="/web")
-    print("[app.py] Gradio UI mounted at /web")
-except Exception as e:
-    import traceback
-    print(f"[app.py] WARNING: Gradio UI failed to mount: {e}")
-    traceback.print_exc()
-
-
+# Root redirects to the built-in OpenEnv Playground at /web
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse(url="/web")

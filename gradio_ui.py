@@ -118,8 +118,8 @@ def format_history_table(history):
 def create_env(difficulty, seed, state):
     task_id = TASK_IDS[difficulty]
     env = SocAlertEnvironment()
-    obs, _ = env.reset(task_id=task_id, seed=int(seed))
-    alerts = obs.get("alerts", [])
+    obs = env.reset(task_id=task_id, seed=int(seed))
+    alerts = obs.alerts
     state["env"] = env
     state["difficulty"] = difficulty
     state["task_id"] = task_id
@@ -166,7 +166,9 @@ def submit_triage(
         attack_chain_position=int(chain_pos) if chain_pos else None,
     )
 
-    obs, reward, done, truncated, info = env.step(act)
+    obs = env.step(act)
+    reward = obs.reward
+    done = obs.done
     state["step"] += 1
     state["rewards"].append(reward)
     hist_entry = {
@@ -180,13 +182,13 @@ def submit_triage(
     }
     state["history"].append(hist_entry)
 
-    alerts = obs.get("alerts", [])
-    feedback = obs.get("feedback", "")
+    alerts = obs.alerts
+    feedback = obs.feedback or ""
     next_alert_id = alerts[0]["alert_id"] if alerts else ""
 
     fb_html = format_feedback(feedback, reward)
 
-    if done or truncated:
+    if done:
         state["done"] = True
         avg = sum(state["rewards"]) / len(state["rewards"]) if state["rewards"] else 0
         fb_html += f"""<div style="background:#0f172a; border:2px solid #22c55e; padding:16px; border-radius:8px; margin-top:12px; text-align:center;">
@@ -219,26 +221,28 @@ def run_evaluation(seed):
         env = SocAlertEnvironment()
 
         try:
-            obs, _ = env.reset(task_id=task_id, seed=seed)
-            alerts = obs.get("alerts", [])
+            obs = env.reset(task_id=task_id, seed=seed)
+            # Use raw alerts from the generator (with ground_truth intact)
+            # because obs.alerts has ground_truth stripped by _sanitize_alerts()
+            raw_alerts = task_def["generator"](seed)
             history = []
-            for alert in alerts:
-                gt = alert.get("ground_truth", {})
+            for alert in raw_alerts:
+                gt = alert["ground_truth"]
                 act = SocAlertAction(
                     alert_id=alert["alert_id"],
-                    classification=gt.get("classification", "suspicious"),
-                    severity=gt.get("severity", "medium"),
-                    category=gt.get("category", "malware"),
-                    assigned_team=gt.get("assigned_team", "malware_ops"),
-                    recommended_action=gt.get("recommended_action", "monitor"),
+                    classification=gt["classification"],
+                    severity=gt["severity"],
+                    category=gt["category"],
+                    assigned_team=gt["assigned_team"],
+                    recommended_action=gt["recommended_action"],
                     confidence=0.95,
                     notes="ground truth evaluation",
-                    campaign_id=gt.get("campaign_id"),
-                    attack_chain_position=gt.get("attack_chain_position"),
+                    campaign_id=alert.get("campaign_id"),
+                    attack_chain_position=alert.get("chain_position"),
                 )
-                obs, reward, done, truncated, info = env.step(act)
+                obs = env.step(act)
                 history.append(act.model_dump())
-                if done or truncated:
+                if obs.done:
                     break
 
             grader = GRADERS[task_id]
@@ -259,7 +263,7 @@ CUSTOM_CSS = """
 
 def build_demo():
     with gr.Blocks(
-        title="SOC Alert Triage — OpenEnv",
+        title="SOC Alert Triage \u2014 OpenEnv",
         css=CUSTOM_CSS,
         theme=gr.themes.Soft(primary_hue="blue", neutral_hue="slate"),
     ) as demo:

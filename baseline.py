@@ -148,7 +148,7 @@ def run_baseline(api_key: Optional[str] = None, model: str = "gpt-4o-mini", seed
     base_url = None
     if key.startswith("hf_"):
         base_url = "https://router.huggingface.co/v1"
-        model = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+        model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
 
     client = OpenAI(api_key=key, base_url=base_url) if base_url else OpenAI(api_key=key)
     scores = {}
