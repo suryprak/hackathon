@@ -16,6 +16,7 @@ Exposes OpenEnv core endpoints plus hackathon-required custom endpoints:
 import os
 from typing import Any, Dict, List, Optional
 
+import gradio as gr
 from fastapi import Body, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -49,11 +50,6 @@ app = create_app(
 
 # ---------------------------------------------------------------------------
 # Custom endpoints required by hackathon
-
-
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/docs")
 # ---------------------------------------------------------------------------
 
 
@@ -165,6 +161,26 @@ async def run_baseline():
         scores=scores,
         details={"model": model_name, "note": "Baseline scores"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Mount Gradio UI
+# ---------------------------------------------------------------------------
+try:
+    try:
+        from ..gradio_ui import build_demo
+    except ImportError:
+        from gradio_ui import build_demo
+
+    _demo = build_demo()
+    app = gr.mount_gradio_app(app, _demo, path="/ui")
+except Exception:
+    pass  # Gradio UI is optional; server works without it
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/ui")
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):
