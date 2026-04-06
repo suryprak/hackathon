@@ -16,6 +16,9 @@ Exposes OpenEnv core endpoints plus hackathon-required custom endpoints:
 import os
 from typing import Any, Dict, List, Optional
 
+# Disable OpenEnv's built-in web interface so our custom Gradio UI takes over at /web
+os.environ["ENABLE_WEB_INTERFACE"] = "false"
+
 import gradio as gr
 from fastapi import Body, HTTPException
 from fastapi.responses import RedirectResponse
@@ -174,8 +177,11 @@ try:
 
     _demo = build_demo()
     app = gr.mount_gradio_app(app, _demo, path="/web")
-except Exception:
-    pass  # Gradio UI is optional; server works without it
+    print("[app.py] Gradio UI mounted at /web")
+except Exception as e:
+    import traceback
+    print(f"[app.py] WARNING: Gradio UI failed to mount: {e}")
+    traceback.print_exc()
 
 
 @app.get("/", include_in_schema=False)
