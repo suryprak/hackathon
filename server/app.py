@@ -173,14 +173,14 @@ try:
         from gradio_ui import build_demo
 
     _demo = build_demo()
-    app = gr.mount_gradio_app(app, _demo, path="/ui")
+    app = gr.mount_gradio_app(app, _demo, path="/web")
 except Exception:
     pass  # Gradio UI is optional; server works without it
 
 
 @app.get("/", include_in_schema=False)
 async def root():
-    return RedirectResponse(url="/ui")
+    return RedirectResponse(url="/web")
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):
