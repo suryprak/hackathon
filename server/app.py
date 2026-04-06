@@ -149,17 +149,21 @@ async def run_baseline():
                 detail="Baseline script not found. Ensure baseline.py is in the package.",
             )
 
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("HF_TOKEN")
     if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="OPENAI_API_KEY environment variable not set.",
+            detail="API key not set. Set OPENAI_API_KEY or HF_TOKEN environment variable.",
         )
 
-    scores = run_baseline(api_key=api_key)
+    model_name = "gpt-4o-mini"
+    if api_key.startswith("hf_"):
+        model_name = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+
+    scores = run_baseline(api_key=api_key, model=model_name)
     return BaselineResponse(
         scores=scores,
-        details={"model": "gpt-4o-mini", "note": "Baseline scores from OpenAI API"},
+        details={"model": model_name, "note": "Baseline scores"},
     )
 
 

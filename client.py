@@ -11,7 +11,10 @@ from typing import Dict
 from openenv.core import EnvClient
 from openenv.core.client_types import StepResult
 
-from .models import SocAlertAction, SocAlertObservation, SocAlertState
+try:
+    from .models import SocAlertAction, SocAlertObservation, SocAlertState
+except ImportError:
+    from models import SocAlertAction, SocAlertObservation, SocAlertState
 
 
 class SocAlertEnv(

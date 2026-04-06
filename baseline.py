@@ -133,18 +133,24 @@ def run_baseline(api_key: Optional[str] = None, model: str = "gpt-4o-mini", seed
     Run baseline inference on all 3 tasks and return scores.
 
     Args:
-        api_key: OpenAI API key (falls back to OPENAI_API_KEY env var)
+        api_key: OpenAI API key or HF token (falls back to OPENAI_API_KEY or HF_TOKEN env vars)
         model: Model to use
         seed: Random seed for reproducible alert generation
 
     Returns:
         Dict mapping task_id to score (0.0-1.0)
     """
-    key = api_key or os.environ.get("OPENAI_API_KEY")
+    key = api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("HF_TOKEN")
     if not key:
-        raise ValueError("OPENAI_API_KEY not provided")
+        raise ValueError("API key not provided. Set OPENAI_API_KEY or HF_TOKEN.")
 
-    client = OpenAI(api_key=key)
+    # Detect HF token and route through HF Inference API
+    base_url = None
+    if key.startswith("hf_"):
+        base_url = "https://router.huggingface.co/v1"
+        model = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+
+    client = OpenAI(api_key=key, base_url=base_url) if base_url else OpenAI(api_key=key)
     scores = {}
 
     for task_id, task_info in TASKS.items():
