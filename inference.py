@@ -61,7 +61,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
 
 # Optional — if you use from_docker_image():
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
@@ -354,30 +354,47 @@ async def run_task(
 # Main — run all 3 tasks
 # ---------------------------------------------------------------------------
 async def main() -> None:
-    llm_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
-
-    # Connect to environment — prefer local server URL for testing, else Docker
-    if LOCAL_SERVER_URL:
-        env = SocAlertEnv(base_url=LOCAL_SERVER_URL)
-        await env.connect()
-    elif LOCAL_IMAGE_NAME:
-        env = await SocAlertEnv.from_docker_image(LOCAL_IMAGE_NAME)
-    else:
-        raise RuntimeError(
-            "Set LOCAL_SERVER_URL or LOCAL_IMAGE_NAME to connect to the environment"
-        )
-
     all_scores: Dict[str, float] = {}
+    env = None
 
     try:
+        if not HF_TOKEN:
+            print("[ERROR] No API key found. Set HF_TOKEN or OPENAI_API_KEY.", flush=True)
+            return
+
+        llm_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+
+        # Connect to environment — prefer local server URL for testing, else Docker
+        if LOCAL_SERVER_URL:
+            env = SocAlertEnv(base_url=LOCAL_SERVER_URL)
+            await env.connect()
+        elif LOCAL_IMAGE_NAME:
+            env = await SocAlertEnv.from_docker_image(LOCAL_IMAGE_NAME)
+        else:
+            print(
+                "[ERROR] Set LOCAL_SERVER_URL or LOCAL_IMAGE_NAME to connect to the environment",
+                flush=True,
+            )
+            return
+
         for task_name, task_info in TASKS.items():
-            score = await run_task(env, llm_client, task_name, task_info, SEED)
-            all_scores[task_name] = score
+            try:
+                score = await run_task(env, llm_client, task_name, task_info, SEED)
+                all_scores[task_name] = score
+            except Exception as e:
+                print(f"[DEBUG] Error running task {task_name}: {e}", flush=True)
+                all_scores[task_name] = 0.0
+
+    except Exception as e:
+        print(f"[ERROR] Fatal error in main: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
     finally:
-        try:
-            await env.close()
-        except Exception as e:
-            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        if env is not None:
+            try:
+                await env.close()
+            except Exception as e:
+                print(f"[DEBUG] env.close() error: {e}", flush=True)
 
     # Final summary
     print(f"\n{'='*60}", flush=True)
