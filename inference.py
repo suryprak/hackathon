@@ -61,7 +61,15 @@ except ImportError:
 # ---------------------------------------------------------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
+
+# Try env vars first, then fall back to cached huggingface-cli token
 HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
+if not HF_TOKEN:
+    try:
+        from huggingface_hub import get_token
+        HF_TOKEN = get_token()
+    except Exception:
+        pass
 
 # Optional — if you use from_docker_image():
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
@@ -364,18 +372,16 @@ async def main() -> None:
 
         llm_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-        # Connect to environment — prefer local server URL for testing, else Docker
+        # Connect to environment — prefer explicit env vars, else default to localhost:8000
         if LOCAL_SERVER_URL:
             env = SocAlertEnv(base_url=LOCAL_SERVER_URL)
             await env.connect()
         elif LOCAL_IMAGE_NAME:
             env = await SocAlertEnv.from_docker_image(LOCAL_IMAGE_NAME)
         else:
-            print(
-                "[ERROR] Set LOCAL_SERVER_URL or LOCAL_IMAGE_NAME to connect to the environment",
-                flush=True,
-            )
-            return
+            # Default: connect to the server already running on the standard OpenEnv port
+            env = SocAlertEnv(base_url="http://localhost:8000")
+            await env.connect()
 
         for task_name, task_info in TASKS.items():
             try:
