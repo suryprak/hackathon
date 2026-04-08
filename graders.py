@@ -7,6 +7,15 @@ Graders are deterministic given the same triage history and alert data.
 
 from typing import Any, Dict, List
 
+# Epsilon bounds to ensure scores are strictly in (0, 1)
+SCORE_MIN = 0.001
+SCORE_MAX = 0.999
+
+
+def _clamp_score(score: float) -> float:
+    """Clamp score to strictly within (0, 1) as required by validation."""
+    return round(min(max(score, SCORE_MIN), SCORE_MAX), 4)
+
 
 def _field_accuracy(history: List[Dict[str, Any]], alerts: List[Dict[str, Any]], field: str) -> float:
     """Compute accuracy for a single field across all triaged alerts."""
@@ -55,7 +64,7 @@ def grade_easy(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]
     Returns: 0.0 - 1.0
     """
     if not triage_history:
-        return 0.0
+        return SCORE_MIN
 
     classification_acc = _field_accuracy(triage_history, alerts, "classification")
     severity_score = _severity_closeness(triage_history, alerts)
@@ -70,7 +79,7 @@ def grade_easy(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]
         + 0.15 * team_acc
         + 0.15 * action_acc
     )
-    return round(min(max(score, 0.0), 1.0), 4)
+    return _clamp_score(score)
 
 
 def grade_medium(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]]) -> float:
@@ -84,7 +93,7 @@ def grade_medium(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, An
     Returns: 0.0 - 1.0
     """
     if not triage_history:
-        return 0.0
+        return SCORE_MIN
 
     total_alerts = len(alerts)
 
@@ -124,7 +133,7 @@ def grade_medium(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, An
         priority_score = 1.0  # No critical alerts to prioritize
 
     score = 0.60 * field_score + 0.20 * coverage + 0.20 * priority_score
-    return round(min(max(score, 0.0), 1.0), 4)
+    return _clamp_score(score)
 
 
 def grade_hard(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]]) -> float:
@@ -138,7 +147,7 @@ def grade_hard(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]
     Returns: 0.0 - 1.0
     """
     if not triage_history:
-        return 0.0
+        return SCORE_MIN
 
     total_alerts = len(alerts)
     alert_map = {a["alert_id"]: a for a in alerts}
@@ -205,7 +214,7 @@ def grade_hard(triage_history: List[Dict[str, Any]], alerts: List[Dict[str, Any]
         + 0.25 * best_campaign_score
         + 0.20 * chain_score
     )
-    return round(min(max(score, 0.0), 1.0), 4)
+    return _clamp_score(score)
 
 
 # Map task IDs to grader functions
