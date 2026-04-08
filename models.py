@@ -5,7 +5,7 @@ Defines typed Pydantic models for actions, observations, and state
 used by a SOC analyst agent triaging security alerts from a SIEM.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from openenv.core.env_server.types import Action, Observation, State
 from pydantic import Field
@@ -40,30 +40,46 @@ RESPONSE_ACTIONS = [
     "close",
 ]
 
+# Literal types for enum-based dropdowns in OpenEnv Playground
+ClassificationType = Literal["true_positive", "false_positive", "benign", "suspicious"]
+SeverityType = Literal["low", "medium", "high", "critical"]
+CategoryType = Literal[
+    "malware", "phishing", "brute_force", "data_exfiltration",
+    "lateral_movement", "reconnaissance", "insider_threat", "denial_of_service",
+]
+TeamType = Literal[
+    "malware_ops", "network_security", "identity_security",
+    "data_protection", "threat_intel",
+]
+ResponseActionType = Literal[
+    "escalate", "isolate_host", "block_ip",
+    "reset_credentials", "monitor", "close",
+]
+
 
 class SocAlertAction(Action):
     """Action taken by the SOC analyst agent to triage an alert."""
 
     alert_id: str = Field(..., description="ID of the alert being triaged")
-    classification: str = Field(
+    classification: ClassificationType = Field(
         ...,
-        description=f"Alert classification: {CLASSIFICATIONS}",
+        description="Alert classification",
     )
-    severity: str = Field(
+    severity: SeverityType = Field(
         ...,
-        description=f"Assessed severity level: {SEVERITIES}",
+        description="Assessed severity level",
     )
-    category: str = Field(
+    category: CategoryType = Field(
         ...,
-        description=f"Threat category: {CATEGORIES}",
+        description="Threat category",
     )
-    assigned_team: str = Field(
+    assigned_team: TeamType = Field(
         ...,
-        description=f"Team to route the alert to: {TEAMS}",
+        description="Team to route the alert to",
     )
-    recommended_action: str = Field(
+    recommended_action: ResponseActionType = Field(
         ...,
-        description=f"Recommended response action: {RESPONSE_ACTIONS}",
+        description="Recommended response action",
     )
     confidence: float = Field(
         default=0.5,
