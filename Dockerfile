@@ -59,8 +59,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Set PYTHONPATH so imports work correctly
 ENV PYTHONPATH="/app/env:$PYTHONPATH"
 
-# Enable OpenEnv's built-in web interface (Playground) at /web
-ENV ENABLE_WEB_INTERFACE=true
+# Disable OpenEnv's built-in Playground; our custom Gradio UI is mounted at /web
+ENV ENABLE_WEB_INTERFACE=false
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
