@@ -16,9 +16,10 @@ Exposes OpenEnv core endpoints plus hackathon-required custom endpoints:
 import os
 from typing import Any, Dict, List, Optional
 
-# Enable OpenEnv's built-in web interface (Playground) at /web
-os.environ["ENABLE_WEB_INTERFACE"] = "true"
+# Disable OpenEnv's built-in Playground — we mount our own Gradio UI at /
+os.environ["ENABLE_WEB_INTERFACE"] = "false"
 
+import gradio as gr
 from fastapi import Body, HTTPException
 from pydantic import BaseModel
 
@@ -162,6 +163,28 @@ async def run_baseline():
         scores=scores,
         details={"model": model_name, "note": "Baseline scores"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Mount custom Gradio UI at / (root)
+# ---------------------------------------------------------------------------
+try:
+    try:
+        from gradio_ui import build_demo, CUSTOM_CSS
+    except ImportError:
+        from soc_alert_env.gradio_ui import build_demo, CUSTOM_CSS
+    _demo = build_demo()
+    # Remove any default root route from OpenEnv before mounting Gradio
+    app.routes[:] = [r for r in app.routes if not (hasattr(r, "path") and r.path == "/")]
+    app = gr.mount_gradio_app(
+        app, _demo, path="/",
+        theme=gr.themes.Base(primary_hue="cyan", neutral_hue="slate"),
+        css=CUSTOM_CSS,
+    )
+except Exception as e:
+    import traceback
+    print(f"[WARN] Could not mount Gradio UI: {e}")
+    traceback.print_exc()
 
 
 def main(host: str = "0.0.0.0", port: int = 8000):

@@ -257,18 +257,32 @@ def run_evaluation(seed):
 # ─── Build the Gradio UI ──────────────────────────────────────────────────────
 
 CUSTOM_CSS = """
+body { font-family: 'Inter', sans-serif; }
 .gradio-container { max-width: 1200px !important; }
-.dark { --body-background-fill: #0f172a; }
+.soc-header {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    padding: 24px; border-radius: 12px; margin-bottom: 16px;
+    color: white; text-align: center;
+}
+.score-box {
+    font-size: 2rem; font-weight: bold; color: #00ff88;
+    text-align: center; padding: 16px;
+    background: rgba(0,255,136,0.1); border-radius: 8px;
+}
 """
 
 def build_demo():
     with gr.Blocks(
         title="SOC Alert Triage — OpenEnv",
     ) as demo:
-        gr.Markdown("""
-# 🛡️ SOC Alert Triage Environment
-**AI-powered Security Operations Center alert triage** — classify, prioritize, and route security alerts from a simulated SIEM.
-Built for the [Meta / HuggingFace / Scaler OpenEnv Hackathon](https://huggingface.co/spaces/open-env/hackathon).
+        gr.HTML("""
+        <div class="soc-header">
+            <h1>🛡️ SOC Alert Triage Environment</h1>
+            <p>Meta × Hugging Face OpenEnv Hackathon  |  Cybersecurity Benchmark</p>
+            <p style="font-size:0.85rem; opacity:0.7;">
+                3 Tasks: Single Alert (Easy) → Queue Triage (Medium) → Campaign Detection (Hard)
+            </p>
+        </div>
         """)
 
         # ── Tab 1: Interactive Triage ──────────────────────────────────────
