@@ -83,6 +83,15 @@ TEMPERATURE = 0.1
 MAX_TOKENS = 1024
 SUCCESS_SCORE_THRESHOLD = 0.5  # normalised score in [0, 1]
 
+# Strict bounds: validator requires scores strictly in (0, 1)
+SCORE_MIN = 0.001
+SCORE_MAX = 0.999
+
+
+def _clamp(score: float) -> float:
+    """Clamp a score to the open interval (SCORE_MIN, SCORE_MAX)."""
+    return round(min(max(score, SCORE_MIN), SCORE_MAX), 4)
+
 # All tasks to run (mirrors environment definitions)
 TASKS = {
     "easy_single_alert": {
@@ -298,7 +307,7 @@ async def run_task(
     triage_log: List[str] = []  # human-readable log for LLM context
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
+    score = SCORE_MIN
     success = False
 
     log_start(task=task_name, env=BENCHMARK, model=MODEL_NAME)
@@ -345,14 +354,20 @@ async def run_task(
             if result.done:
                 break
 
-        # Grade with the official grader (regenerate alerts with ground truth)
+    except Exception as e:
+        print(f"[DEBUG] Error in task {task_name}: {e}", flush=True)
+
+    # Always grade — even if steps failed, grade whatever we have
+    try:
         ground_truth_alerts = task_info["generator"](seed)
         grader = GRADERS[task_name]
         score = grader(triage_history, ground_truth_alerts)
-        success = score >= SUCCESS_SCORE_THRESHOLD
-
     except Exception as e:
-        print(f"[DEBUG] Error in task {task_name}: {e}", flush=True)
+        print(f"[DEBUG] Grader error in task {task_name}: {e}", flush=True)
+
+    # Clamp score to strictly (0, 1) — validator rejects exactly 0.0 and 1.0
+    score = _clamp(score)
+    success = score >= SUCCESS_SCORE_THRESHOLD
 
     log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
     return score
@@ -389,7 +404,7 @@ async def main() -> None:
                 all_scores[task_name] = score
             except Exception as e:
                 print(f"[DEBUG] Error running task {task_name}: {e}", flush=True)
-                all_scores[task_name] = 0.0
+                all_scores[task_name] = SCORE_MIN
 
     except Exception as e:
         print(f"[ERROR] Fatal error in main: {e}", flush=True)

@@ -122,6 +122,9 @@ async def grade_episode(request: GraderRequest = Body(...)):
     grader = GRADERS[request.task_id]
     score = grader(request.triage_history, alerts)
 
+    # Double-clamp: ensure score is strictly in (0, 1)
+    score = round(min(max(score, 0.001), 0.999), 4)
+
     return GraderResponse(
         task_id=request.task_id,
         score=score,

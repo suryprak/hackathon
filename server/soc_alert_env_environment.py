@@ -312,6 +312,8 @@ class SocAlertEnvironment(Environment):
 
     def _make_observation(self, feedback: str, reward: float) -> SocAlertObservation:
         task_def = TASK_DEFINITIONS[self._task_id]
+        # Clamp reward to [0, 1] — validator may check step rewards are in range
+        clamped_reward = round(min(max(reward, 0.001), 0.999), 4) if self._done else reward
         return SocAlertObservation(
             alerts=self._sanitize_alerts([a for a in self._alerts if a["alert_id"] in self._pending_alert_ids]),
             alert_count=len(self._pending_alert_ids),
@@ -321,5 +323,5 @@ class SocAlertEnvironment(Environment):
             task_description=task_def["description"],
             feedback=feedback,
             done=self._done,
-            reward=reward,
+            reward=clamped_reward,
         )
