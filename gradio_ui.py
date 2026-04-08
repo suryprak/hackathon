@@ -263,9 +263,7 @@ CUSTOM_CSS = """
 
 def build_demo():
     with gr.Blocks(
-        title="SOC Alert Triage \u2014 OpenEnv",
-        css=CUSTOM_CSS,
-        theme=gr.themes.Soft(primary_hue="blue", neutral_hue="slate"),
+        title="SOC Alert Triage — OpenEnv",
     ) as demo:
         gr.Markdown("""
 # 🛡️ SOC Alert Triage Environment

@@ -15,6 +15,19 @@ tags:
 
 An OpenEnv RL environment simulating a **Security Operations Center (SOC)** where an AI agent acts as a Tier 1 analyst triaging incoming security alerts from a SIEM system.
 
+## Why SOC Alert Triage?
+
+Security Operations Centers are drowning in alerts. The average enterprise SOC receives **11,000+ alerts per day**, and analysts spend up to 30 minutes triaging each one. With a global shortage of cybersecurity professionals (~3.5 million unfilled positions) and analyst burnout rates exceeding 65%, automating Tier 1 triage is one of the highest-impact applications of AI in cybersecurity.
+
+This environment captures the core decision-making loop of a SOC analyst:
+- **Classify** — Is this alert a real threat, a false positive, or benign activity?
+- **Prioritize** — Which alerts need immediate attention vs. monitoring?
+- **Route** — Which specialist team should handle this?
+- **Act** — Isolate the host? Block the IP? Reset credentials?
+- **Correlate** — Are seemingly unrelated alerts part of a coordinated attack campaign?
+
+Every alert includes realistic MITRE ATT&CK annotations, raw SIEM log excerpts, and contextual descriptions that mirror what analysts see in tools like Splunk, QRadar, and Microsoft Sentinel.
+
 ## Overview
 
 The agent receives security alerts with MITRE ATT&CK annotations, raw log excerpts, and contextual descriptions. It must classify each alert, assess severity, identify the threat category, route to the correct team, and recommend a response action. Advanced tasks require identifying coordinated attack campaigns across multiple correlated alerts.
@@ -59,6 +72,32 @@ Grading is deterministic and based on field-level accuracy against ground truth:
 - **Easy**: 30% classification + 20% severity + 20% category + 15% team + 15% action
 - **Medium**: 60% field accuracy + 20% coverage + 20% priority ordering (critical alerts first)
 - **Hard**: 40% field accuracy + 15% coverage + 25% campaign detection F1 + 20% kill chain ordering
+
+### Per-Step Reward Shaping
+
+Each `step()` returns a reward in [0, 1] based on:
+- **Classification match** (25%) — exact match with ground truth
+- **Severity match** (15%) — exact match (100%) or adjacent severity (5%)
+- **Category match** (15%) — exact match
+- **Team routing** (15%) — correct specialist team
+- **Action match** (15%) — correct response action
+- **Campaign bonus** (hard task) — correct `campaign_id` grouping and `attack_chain_position`
+- **Time penalty** — small penalty per step to encourage efficiency
+
+This provides rich partial-credit signal at every step, not just end-of-episode.
+
+## Baseline Scores
+
+Baseline scores using **Llama-3.3-70B-Instruct** via HF Inference API (seed=42):
+
+| Task | Score | Accuracy |
+|------|-------|----------|
+| `easy_single_alert` | 0.650 | 65.0% |
+| `medium_queue_triage` | 0.832 | 83.2% |
+| `hard_campaign_detection` | 0.594 | 59.4% |
+| **Average** | **0.692** | **69.2%** |
+
+The hard task is intentionally challenging — it requires both accurate per-alert triage AND campaign correlation with kill-chain ordering, which current frontier models struggle with.
 
 ## Quick Start
 
